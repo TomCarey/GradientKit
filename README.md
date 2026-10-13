@@ -1,3 +1,4 @@
+
 # GradientKit
 
 Gradients for SwiftUI, UIKit and Core Graphics that blend colours better than a straight line through sRGB.
@@ -97,6 +98,9 @@ OKLCH blends hue as an angle, so you can choose which way round the colour wheel
 
 If one end is grey, white or black, it takes the other end's hue, so a fade to white doesn't swing through unrelated colours.
 
+<img width="327" height="267" alt="Screenshot 2026-10-14 at 10 28 32 AM" src="https://github.com/user-attachments/assets/ad2e9011-ecf7-415d-ad49-7096e76d4620" />
+
+
 ### Gamut mapping
 
 OKLab and OKLCH can produce colours that an sRGB display can't show. Rather than clamping each channel, which shifts hue and leaves creases, GradientKit uses the [CSS Color 4 gamut-mapping algorithm](https://www.w3.org/TR/css-color-4/#gamut-mapping). It keeps lightness and hue and reduces chroma (saturation) until the colour fits. The lower-level functions also offer plain clipping:
@@ -106,6 +110,8 @@ let vividGreen = OKLCH(lightness: 0.7, chroma: 0.35, hue: 145) // outside sRGB
 vividGreen.components                    // gamut mapped (default)
 vividGreen.components(mapping: .clip)    // per-channel clamp
 ```
+
+<img width="414" height="420" alt="Gamut Mapping" src="https://github.com/user-attachments/assets/c1fd534b-5295-4bdf-bfde-3cb75430f29b" />
 
 ### Transparency
 
@@ -129,6 +135,8 @@ Easing controls *how quickly* each segment moves between its two colours. It doe
 ```
 
 Curves that overshoot ("back" easing) are clamped, so colours never extrapolate past a stop.
+
+<img width="437" height="260" alt="Easing" src="https://github.com/user-attachments/assets/51e0ed6f-0860-4026-a1c6-1ede57adc41f" />
 
 ## Core Graphics
 
