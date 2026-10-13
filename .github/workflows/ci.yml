@@ -18,7 +18,7 @@ jobs:
     name: Test (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: |
           xcodebuild -version
@@ -38,7 +38,7 @@ jobs:
           - watchOS Simulator
           - visionOS Simulator
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build
         run: |
           set -o pipefail
