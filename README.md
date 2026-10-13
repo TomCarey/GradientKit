@@ -1,6 +1,10 @@
 
 # GradientKit
 
+[![CI](https://github.com/TomCarey/GradientKit/actions/workflows/ci.yml/badge.svg)](https://github.com/TomCarey/GradientKit/actions/workflows/ci.yml)
+[![Swift versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FTomCarey%2FGradientKit%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/TomCarey/GradientKit)
+[![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FTomCarey%2FGradientKit%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/TomCarey/GradientKit)
+
 Gradients for SwiftUI, UIKit and Core Graphics that blend colours better than a straight line through sRGB.
 
 A standard sRGB gradient blends gamma-encoded values, so the middle of a gradient between two saturated colours goes dark and muddy (red → green passes through brown). GradientKit lets you choose how colours blend between stops:
@@ -30,6 +34,7 @@ iOS 17, macOS 14, tvOS 17, watchOS 10 or visionOS 1, with Swift 6.
 
 Add the package in Xcode (**File ▸ Add Package Dependencies…**) or in `Package.swift`:
 
+<!-- x-release-please-start-version -->
 ```swift
 dependencies: [
     .package(url: "https://github.com/TomCarey/GradientKit.git", from: "0.2.0"),
@@ -38,6 +43,7 @@ targets: [
     .target(name: "MyApp", dependencies: ["GradientKit"]),
 ]
 ```
+<!-- x-release-please-end -->
 
 ## SwiftUI
 

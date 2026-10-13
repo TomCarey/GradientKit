@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Test
+        run: swift test
+
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - iOS Simulator
+          - tvOS Simulator
+          - watchOS Simulator
+          - visionOS Simulator
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -scheme GradientKit \
+            -destination "generic/platform=${{ matrix.platform }}" \
+            -quiet
