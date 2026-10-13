@@ -40,7 +40,7 @@ func fadeToClearKeepsColour(_ mode: GradientInterpolation) {
 
 @Test func resolvedSamplesAcrossMultipleStops() {
     let blue = ColorComponents(red: 0, green: 0, blue: 1)
-    let gradient = InterpolatedGradient.Resolved(stops: [(red, 0), (green, 0.5), (blue, 1)])
+    let gradient = InterpolatedGradient.Resolved(stops: [(red, 0), (green, 0.5), (blue, 1)], interpolation: .pythagorean)
     #expect(gradient.components(at: -1) == red)
     #expect(gradient.components(at: 0.5) == green)
     #expect(gradient.components(at: 2) == blue)
@@ -278,3 +278,66 @@ func approximationStopsTrackEasing(_ easing: GradientEasing) {
     }
     #expect(worst < 0.01)
 }
+
+// MARK: - Fades
+
+@Test(arguments: [GradientInterpolation.sRGB, .pythagorean, .oklab, .oklch])
+func fadeKeepsColourAndEasesAlpha(_ mode: GradientInterpolation) {
+    let colour = Color(.sRGB, red: 0.2, green: 0.4, blue: 0.6)
+    let gradient = InterpolatedGradient.fade(colour, interpolation: mode).resolved(in: EnvironmentValues())
+    for location in [0.0, 0.2, 0.5, 0.8, 1.0] {
+        let sample = gradient.components(at: location)
+        #expect(abs(sample.alpha - (1 - GradientEasing.easeInOut.apply(location))) < 1e-6)
+        if location < 1 {
+            #expect(isClose(ColorComponents(red: sample.red, green: sample.green, blue: sample.blue), ColorComponents(red: 0.2, green: 0.4, blue: 0.6)), "\(mode) at \(location)")
+        }
+    }
+}
+
+@Test func fadeIntoEndColour() {
+    let gradient = InterpolatedGradient.fade(.white, to: .black, easing: .linear).resolved(in: EnvironmentValues())
+    #expect(isClose(gradient.components(at: 1), ColorComponents(red: 0, green: 0, blue: 0)))
+    #expect(gradient.interpolation == .oklab)
+}
+
+// MARK: - InterpolatedGradientView
+
+#if canImport(UIKit) && !os(watchOS)
+import UIKit
+
+private struct TestColourTrait: UITraitDefinition {
+    static let defaultValue = false
+}
+
+private let traitColour = UIColor { $0[TestColourTrait.self] ? .red : .blue }
+
+@MainActor @Test func viewFadeEndsTransparent() throws {
+    let view = InterpolatedGradientView(fading: .red)
+    #expect(view.colors.count == 2)
+    #expect(view.easing == .easeInOut)
+    #expect(view.interpolation == .oklab)
+    #expect(view.startPoint == CGPoint(x: 0.5, y: 1) && view.endPoint == CGPoint(x: 0.5, y: 0))
+    let plain = InterpolatedGradientView()
+    #expect(plain.startPoint == CGPoint(x: 0.5, y: 0) && plain.endPoint == CGPoint(x: 0.5, y: 1))
+    let colors = try #require(view.gradientLayer.colors as? [CGColor])
+    #expect(colors.first?.alpha == 1)
+    #expect(colors.last?.alpha == 0)
+}
+
+@MainActor @Test func viewReResolvesCustomColourTraits() throws {
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+    let view = InterpolatedGradientView(colors: [traitColour, traitColour], frame: window.bounds)
+    view.colorTraits += [TestColourTrait.self]
+    window.addSubview(view)
+    window.isHidden = false
+    func firstColour() throws -> ColorComponents {
+        let first = try #require((view.gradientLayer.colors as? [CGColor])?.first)
+        return try #require(ColorComponents(first))
+    }
+    #expect(isClose(try firstColour(), ColorComponents(red: 0, green: 0, blue: 1)))
+
+    view.traitOverrides[TestColourTrait.self] = true
+    view.layoutIfNeeded()
+    #expect(isClose(try firstColour(), ColorComponents(red: 1, green: 0, blue: 0)))
+}
+#endif

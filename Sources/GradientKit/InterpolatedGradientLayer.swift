@@ -17,7 +17,7 @@ open class InterpolatedGradientLayer: CAGradientLayer {
     /// Locations for ``gradientColors`` in `0...1`, or `nil` for evenly spaced.
     open var gradientLocations: [Double]? { didSet { updateStops() } }
 
-    open var interpolation: GradientInterpolation = .pythagorean { didSet { updateStops() } }
+    open var interpolation: GradientInterpolation = .oklab { didSet { updateStops() } }
 
     open var easing: GradientEasing = .linear { didSet { updateStops() } }
 

@@ -40,10 +40,10 @@ private struct ComparisonRow: View {
                 Rectangle().fill(.interpolatedLinear(colors: colors, interpolation: .sRGB, startPoint: .leading, endPoint: .trailing))
             }
             labelled("Pythagorean (ShapeStyle)") {
-                Rectangle().fill(.interpolatedLinear(colors: colors, startPoint: .leading, endPoint: .trailing))
+                Rectangle().fill(.interpolatedLinear(colors: colors, interpolation: .pythagorean, startPoint: .leading, endPoint: .trailing))
             }
             labelled("Pythagorean (CGShading)") {
-                InterpolatedShadingView(colors: colors, kind: .axial(start: .leading, end: .trailing))
+                InterpolatedShadingView(colors: colors, interpolation: .pythagorean, kind: .axial(start: .leading, end: .trailing))
             }
             labelled("OKLab") {
                 Rectangle().fill(.interpolatedLinear(colors: colors, interpolation: .oklab, startPoint: .leading, endPoint: .trailing))
@@ -87,7 +87,7 @@ private struct ComparisonRow: View {
     Grid(horizontalSpacing: 16, verticalSpacing: 16) {
         GridRow {
             Text("sRGB").font(.headline)
-            Text("Pythagorean").font(.headline)
+            Text("OKLab").font(.headline)
         }
         GridRow {
             Circle().fill(.interpolatedRadial(colors: colors, interpolation: .sRGB, startRadius: 0, endRadius: 80))
@@ -98,7 +98,7 @@ private struct ComparisonRow: View {
             Circle().fill(.interpolatedAngular(colors: [.red, .green, .blue, .red]))
         }
         GridRow {
-            Text("CGShading radial").font(.caption).gridCellColumns(2)
+            Text("CGShading radial (OKLab)").font(.caption).gridCellColumns(2)
         }
         GridRow {
             InterpolatedShadingView(colors: colors, kind: .radial(center: .center, startRadius: 0, endRadius: 1))
@@ -168,6 +168,31 @@ private struct ComparisonRow: View {
     }
     .padding()
     .frame(width: 520)
+}
+
+#Preview("Scrims") {
+    // A linear fade starts abruptly, leaving a visible edge where it meets the
+    // image; an eased fade blends in. Both hold clear over the top half.
+    let background = Color(red: 0.08, green: 0.1, blue: 0.13)
+    let backdrop = LinearGradient(colors: [.orange, .pink, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+    HStack(spacing: 12) {
+        VStack {
+            backdrop.overlay {
+                LinearGradient(colors: [background.opacity(0), background.opacity(0), background], startPoint: .top, endPoint: .bottom)
+            }
+            Text("Linear").font(.caption)
+        }
+        VStack {
+            backdrop.overlay {
+                Rectangle().fill(.interpolatedFade(background, startPoint: .bottom, endPoint: .center))
+            }
+            Text(".interpolatedFade").font(.caption)
+        }
+    }
+    .padding()
+    .background(background)
+    .foregroundStyle(.white)
+    .frame(width: 360, height: 300)
 }
 
 #Preview("OKLCH hue directions") {
@@ -260,7 +285,7 @@ private struct ComparisonRow: View {
     let pairs: [(String, [Color], GradientInterpolation)] = [
         ("Black → White · OKLab", [.black, .white], .oklab),
         ("Blue → Yellow · OKLab", [.blue, .yellow], .oklab),
-        ("Red → Green → Blue · OKLab", [.red, .green.opacity(0), .blue], .oklab),
+        ("Red → Green → Blue · OKLab", [.red, .green, .blue], .oklab),
     ]
     ScrollView {
         VStack(alignment: .leading, spacing: 16) {

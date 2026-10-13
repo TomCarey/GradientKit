@@ -7,12 +7,20 @@ A standard sRGB gradient blends gamma-encoded values, so the middle of a gradien
 
 | Interpolation | What it does | Good for |
 |---|---|---|
-| `.sRGB` | Straight blend of gamma-encoded sRGB (CSS `in srgb`, `CGGradient`) | Matching legacy gradients |
-| `.pythagorean` *(default)* | Root-mean-square blend, `√((1−t)·a² + t·b²)`. A cheap approximation of blending real light | Bright transitions between saturated colours |
-| `.oklab` | Blend in the [OKLab](https://bottosson.github.io/posts/oklab/) perceptual colour space | Even, smooth lightness; neutral fades |
+| `.oklab` *(default)* | Blend in the [OKLab](https://bottosson.github.io/posts/oklab/) perceptual colour space | Even, smooth lightness; fades to white, black or transparency |
 | `.oklch` | Blend lightness, chroma and hue in OKLCH, going round the hue wheel | Vivid gradients that stay saturated |
+| `.pythagorean` | Root-mean-square blend, `√((1−t)·a² + t·b²)`. A cheap approximation of blending real light | Bright transitions between saturated colours |
+| `.sRGB` | Straight blend of gamma-encoded sRGB (CSS `in srgb`, `CGGradient`) | Matching legacy gradients |
 
 Each mode can be combined with an [easing curve](#easing) and drawn as a [SwiftUI shape style](#swiftui), a [Quartz shading](#core-graphics), or a [UIKit view or `CAGradientLayer`](#uikit).
+
+### Defaults
+
+GradientKit picks defaults so the shortest call usually looks right:
+
+- **Interpolation: `.oklab`.** It has even lightness for any pair of colours and never swings through unrelated hues. Reach for `.oklch` when a gradient between distant hues should stay vivid.
+- **Easing: `.linear`** for gradients and **`.easeInOut`** for [fades](#fades). Easing applies to every segment, so on a multi-stop gradient it would linger on each stop; on a two-colour fade it hides the edge where the fade begins.
+- **Direction:** `InterpolatedGradientView` runs top to bottom, like `CAGradientLayer`. Fades default to a scrim, solid along the bottom edge and clear at the top.
 
 ## Requirements
 
@@ -24,7 +32,7 @@ Add the package in Xcode (**File ▸ Add Package Dependencies…**) or in `Packa
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/TomCarey/GradientKit.git", from: "0.1.0"),
+    .package(url: "https://github.com/TomCarey/GradientKit.git", from: "0.2.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["GradientKit"]),
@@ -42,7 +50,7 @@ import SwiftUI
 struct Banner: View {
     var body: some View {
         VStack {
-            // Pythagorean blending by default
+            // OKLab blending by default
             Rectangle()
                 .fill(.interpolatedLinear(colors: [.red, .green], startPoint: .leading, endPoint: .trailing))
 
@@ -115,7 +123,7 @@ vividGreen.components(mapping: .clip)    // per-channel clamp
 
 ### Transparency
 
-All modes premultiply by alpha, so a fade to a transparent colour keeps its hue instead of greying out:
+Pythagorean, OKLab and OKLCH premultiply by alpha, so a fade to a transparent colour keeps its hue instead of greying out. `.sRGB` doesn't, to match `CGGradient`, so fade to the same colour at zero opacity rather than `.clear` (or use [`fade`](#fades), which does that for you):
 
 ```swift
 Rectangle().fill(.interpolatedLinear(colors: [.orange, .orange.opacity(0)], startPoint: .leading, endPoint: .trailing))
@@ -138,7 +146,26 @@ Curves that overshoot ("back" easing) are clamped, so colours never extrapolate 
 
 <img width="437" height="260" alt="Easing" src="https://github.com/user-attachments/assets/51e0ed6f-0860-4026-a1c6-1ede57adc41f" />
 
-## Core Graphics
+## Fades
+
+The most common gradient in an app is a scrim: a solid colour fading to transparent over an image or the end of some text. `fade` builds one, easing in and out by default. A linear fade starts and stops abruptly, which leaves a visible edge where it meets the solid colour.
+
+```swift
+// Solid along the bottom edge, clear at the top
+Rectangle().fill(.interpolatedFade(.background))
+
+// Solid at the bottom, clear from the middle up
+Rectangle().fill(.interpolatedFade(.background, endPoint: .center))
+
+// Fade into another colour instead of transparency
+Rectangle().fill(.interpolatedFade(.indigo, to: .black.opacity(0.5), startPoint: .bottom, endPoint: .top))
+
+// As an InterpolatedGradient, for radial or angular fades
+Circle().fill(.interpolatedRadial(.fade(.white), startRadius: 0, endRadius: 80))
+```
+
+The end colours extend beyond the start and end points. To hold the solid colour or the transparency over part of a shape, move the points in, rather than repeating stops.
+
 
 `InterpolatedShading` builds a Quartz `CGShading` whose `CGFunction` computes the exact colour for every sample, following Apple's [Quartz 2D shading guide](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_shadings/dq_shadings.html):
 
@@ -178,13 +205,28 @@ let header = InterpolatedGradientView(
 header.startPoint = CGPoint(x: 0, y: 0)
 header.endPoint = CGPoint(x: 1, y: 1)
 
-let spotlight = InterpolatedGradientView(colors: [.white, .black], interpolation: .oklab)
+let spotlight = InterpolatedGradientView(colors: [.white, .black])
 spotlight.type = .radial
 spotlight.startPoint = CGPoint(x: 0.5, y: 0.5) // centre
 spotlight.endPoint = CGPoint(x: 1, y: 1)       // sets the radii
 ```
 
-`type` can be `.axial`, `.radial` or `.conic`. `startPoint` and `endPoint` use unit coordinates and mean the same as on `CAGradientLayer`.
+`type` can be `.axial`, `.radial` or `.conic`. `startPoint` and `endPoint` use unit coordinates and mean the same as on `CAGradientLayer`, including running top to bottom by default.
+
+For a [fade](#fades), the colour sits at `startPoint` and the transparency at `endPoint`. By default that's a scrim along the bottom edge:
+
+```swift
+// Solid along the left fifth, fading out to the right
+let edge = InterpolatedGradientView(fading: .systemBackground)
+edge.startPoint = CGPoint(x: 0.2, y: 0.5)
+edge.endPoint = CGPoint(x: 1, y: 0.5)
+```
+
+Colours are re-resolved when the system traits that affect colour appearance change. If your dynamic colours also read custom traits, add them to `colorTraits`:
+
+```swift
+header.colorTraits += [PresentationModeTrait.self]
+```
 
 To work with layers directly, including on macOS, use `InterpolatedGradientLayer`. Set `gradientColors` and `gradientLocations`, not `colors` and `locations`; the layer fills those in itself:
 
@@ -194,6 +236,16 @@ layer.gradientColors = [UIColor.systemTeal.cgColor, UIColor.systemPurple.cgColor
 layer.gradientLocations = [0.2, 1]
 layer.interpolation = .pythagorean
 layer.easing = .easeOut
+```
+
+An eased layer also makes a softer mask for fading out the edges of scrolling content:
+
+```swift
+let mask = InterpolatedGradientLayer()
+mask.gradientColors = [UIColor.clear, .white, .white, .clear].map(\.cgColor)
+mask.gradientLocations = [0, 0.05, 0.85, 1]
+mask.easing = .easeInOut
+textContainer.layer.mask = mask
 ```
 
 ## Sampling colours directly

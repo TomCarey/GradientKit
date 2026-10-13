@@ -1,4 +1,7 @@
 /// How the colours between two gradient stops are blended.
+///
+/// GradientKit defaults to ``oklab``: it gives even, predictable lightness for
+/// any pair of colours and fades cleanly to white, black and transparency.
 public enum GradientInterpolation: Hashable, Sendable {
     /// Straight lerp of gamma-encoded sRGB values — CSS `in srgb`, SwiftUI's
     /// `Gradient.ColorSpace.device`, and what `CGGradient` does. (Not to be

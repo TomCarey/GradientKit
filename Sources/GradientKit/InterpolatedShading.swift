@@ -95,7 +95,7 @@ public struct InterpolatedShadingView: View {
         self.kind = kind
     }
 
-    public init(colors: [Color], interpolation: GradientInterpolation = .pythagorean, easing: GradientEasing = .linear, kind: Kind) {
+    public init(colors: [Color], interpolation: GradientInterpolation = .oklab, easing: GradientEasing = .linear, kind: Kind) {
         self.init(InterpolatedGradient(colors: colors, interpolation: interpolation, easing: easing), kind: kind)
     }
 

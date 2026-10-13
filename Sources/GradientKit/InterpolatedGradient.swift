@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A gradient whose colours are blended with Pythagorean (root-mean-square),
-/// OKLab or OKLCH interpolation instead of plain linear interpolation.
+/// A gradient whose colours are blended in OKLab (the default), OKLCH or with
+/// Pythagorean (root-mean-square) interpolation instead of plain sRGB.
 ///
 /// Use it anywhere a `ShapeStyle` is accepted:
 ///
@@ -9,7 +9,7 @@ import SwiftUI
 /// Rectangle().fill(.interpolatedLinear(colors: [.red, .green], startPoint: .leading, endPoint: .trailing))
 /// Circle().fill(.interpolatedRadial(colors: [.yellow, .blue], startRadius: 0, endRadius: 100))
 /// Rectangle().fill(.interpolatedLinear(colors: [.blue, .yellow], interpolation: .oklch, startPoint: .top, endPoint: .bottom))
-/// Rectangle().fill(.interpolatedLinear(colors: [.black, .white], interpolation: .oklab, easing: .easeInOut, startPoint: .leading, endPoint: .trailing))
+/// Rectangle().fill(.interpolatedLinear(colors: [.black, .white], interpolation: .pythagorean, easing: .easeInOut, startPoint: .leading, endPoint: .trailing))
 /// ```
 ///
 /// Or draw it directly with Quartz shadings via ``InterpolatedShadingView``.
@@ -26,7 +26,7 @@ public struct InterpolatedGradient: Hashable, Sendable {
 
     public var stops: [Stop]
 
-    /// How colours between stops are blended. Defaults to ``GradientInterpolation/pythagorean``.
+    /// How colours between stops are blended. Defaults to ``GradientInterpolation/oklab``.
     public var interpolation: GradientInterpolation
 
     /// How quickly each segment moves between its two colours. Defaults to ``GradientEasing/linear``.
@@ -39,7 +39,7 @@ public struct InterpolatedGradient: Hashable, Sendable {
 
     public init(
         stops: [Stop],
-        interpolation: GradientInterpolation = .pythagorean,
+        interpolation: GradientInterpolation = .oklab,
         easing: GradientEasing = .linear,
         tolerance: Double = Resolved.defaultTolerance
     ) {
@@ -52,7 +52,7 @@ public struct InterpolatedGradient: Hashable, Sendable {
     /// Evenly spaced colours, like `Gradient(colors:)`.
     public init(
         colors: [Color],
-        interpolation: GradientInterpolation = .pythagorean,
+        interpolation: GradientInterpolation = .oklab,
         easing: GradientEasing = .linear,
         tolerance: Double = Resolved.defaultTolerance
     ) {
@@ -67,12 +67,39 @@ public struct InterpolatedGradient: Hashable, Sendable {
 
     public init(
         _ gradient: Gradient,
-        interpolation: GradientInterpolation = .pythagorean,
+        interpolation: GradientInterpolation = .oklab,
         easing: GradientEasing = .linear,
         tolerance: Double = Resolved.defaultTolerance
     ) {
         self.init(
             stops: gradient.stops.map { Stop(color: $0.color, location: Double($0.location)) },
+            interpolation: interpolation,
+            easing: easing,
+            tolerance: tolerance
+        )
+    }
+
+    /// `color` fading out to transparent, or into `endColor`.
+    ///
+    /// Fades ease in and out by default. A straight linear fade starts and stops
+    /// abruptly, leaving a visible edge where it meets the solid colour. To hold the
+    /// solid colour or the transparency over part of a shape, move the gradient's
+    /// start and end points in, since the end colours extend beyond them:
+    ///
+    /// ```swift
+    /// // Clear over the top half, fading in to the background at the bottom.
+    /// Rectangle().fill(.interpolatedLinear(.fade(.background), startPoint: .bottom, endPoint: .center))
+    /// ```
+    public static func fade(
+        _ color: Color,
+        to endColor: Color? = nil,
+        interpolation: GradientInterpolation = .oklab,
+        easing: GradientEasing = .easeInOut,
+        tolerance: Double = Resolved.defaultTolerance
+    ) -> InterpolatedGradient {
+        // Fade to the same colour rather than `.clear`, which `.sRGB` doesn't premultiply.
+        InterpolatedGradient(
+            colors: [color, endColor ?? color.opacity(0)],
             interpolation: interpolation,
             easing: easing,
             tolerance: tolerance
@@ -103,7 +130,7 @@ public struct InterpolatedGradient: Hashable, Sendable {
 
         public init(
             stops: [(components: ColorComponents, location: Double)],
-            interpolation: GradientInterpolation = .pythagorean,
+            interpolation: GradientInterpolation = .oklab,
             easing: GradientEasing = .linear
         ) {
             self.stops = stops.sorted { $0.location < $1.location }
@@ -266,10 +293,24 @@ extension ShapeStyle where Self == InterpolatedLinearGradient {
     }
 
     public static func interpolatedLinear(
-        colors: [Color], interpolation: GradientInterpolation = .pythagorean, easing: GradientEasing = .linear,
+        colors: [Color], interpolation: GradientInterpolation = .oklab, easing: GradientEasing = .linear,
         startPoint: UnitPoint, endPoint: UnitPoint
     ) -> Self {
         .init(gradient: InterpolatedGradient(colors: colors, interpolation: interpolation, easing: easing), startPoint: startPoint, endPoint: endPoint)
+    }
+
+    /// `color` at `startPoint`, fading to transparent (or `endColor`) at `endPoint`.
+    /// Defaults to a scrim: solid along the bottom edge, clear at the top.
+    /// See ``InterpolatedGradient/fade(_:to:interpolation:easing:tolerance:)``.
+    public static func interpolatedFade(
+        _ color: Color, to endColor: Color? = nil,
+        interpolation: GradientInterpolation = .oklab, easing: GradientEasing = .easeInOut,
+        startPoint: UnitPoint = .bottom, endPoint: UnitPoint = .top
+    ) -> Self {
+        .init(
+            gradient: .fade(color, to: endColor, interpolation: interpolation, easing: easing),
+            startPoint: startPoint, endPoint: endPoint
+        )
     }
 }
 
@@ -279,7 +320,7 @@ extension ShapeStyle where Self == InterpolatedRadialGradient {
     }
 
     public static func interpolatedRadial(
-        colors: [Color], interpolation: GradientInterpolation = .pythagorean, easing: GradientEasing = .linear,
+        colors: [Color], interpolation: GradientInterpolation = .oklab, easing: GradientEasing = .linear,
         center: UnitPoint = .center, startRadius: CGFloat, endRadius: CGFloat
     ) -> Self {
         .init(
@@ -295,7 +336,7 @@ extension ShapeStyle where Self == InterpolatedAngularGradient {
     }
 
     public static func interpolatedAngular(
-        colors: [Color], interpolation: GradientInterpolation = .pythagorean, easing: GradientEasing = .linear,
+        colors: [Color], interpolation: GradientInterpolation = .oklab, easing: GradientEasing = .linear,
         center: UnitPoint = .center, startAngle: Angle = .zero, endAngle: Angle = .degrees(360)
     ) -> Self {
         .init(

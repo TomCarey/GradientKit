@@ -12,7 +12,8 @@ import UIKit
 ///
 /// Dynamic colours (`.systemBlue`, asset-catalog colours…) are resolved against
 /// the view's trait collection and re-resolved when dark mode, contrast or
-/// elevation changes.
+/// elevation changes. If your colours also depend on custom traits, add them
+/// to ``colorTraits``.
 open class InterpolatedGradientView: UIView {
     open override class var layerClass: AnyClass { InterpolatedGradientLayer.self }
 
@@ -42,13 +43,15 @@ open class InterpolatedGradientView: UIView {
         set { gradientLayer.type = newValue }
     }
 
-    /// In unit coordinates. For `.radial` this is the centre; for `.conic`, the centre of rotation.
+    /// In unit coordinates. Defaults to the top centre, so gradients run top to
+    /// bottom as on `CAGradientLayer`. For `.radial` this is the centre; for
+    /// `.conic`, the centre of rotation.
     open var startPoint: CGPoint {
         get { gradientLayer.startPoint }
         set { gradientLayer.startPoint = newValue }
     }
 
-    /// In unit coordinates. For `.radial` the offset from `startPoint` sets the
+    /// In unit coordinates. Defaults to the bottom centre. For `.radial` the offset from `startPoint` sets the
     /// ellipse's radii; for `.conic` it sets the starting angle.
     open var endPoint: CGPoint {
         get { gradientLayer.endPoint }
@@ -58,7 +61,7 @@ open class InterpolatedGradientView: UIView {
     public init(
         colors: [UIColor] = [],
         locations: [Double]? = nil,
-        interpolation: GradientInterpolation = .pythagorean,
+        interpolation: GradientInterpolation = .oklab,
         easing: GradientEasing = .linear,
         frame: CGRect = .zero
     ) {
@@ -68,6 +71,36 @@ open class InterpolatedGradientView: UIView {
         self.interpolation = interpolation
         self.easing = easing
         self.colors = colors
+        updateColors() // `didSet` doesn't run for assignments in the class's own initialiser.
+    }
+
+    /// `color` at ``startPoint``, fading to transparent (or `endColor`) at ``endPoint``.
+    ///
+    /// A scrim: solid along the bottom edge, clear at the top. Fades ease in and
+    /// out by default, so there's no visible edge where they meet the solid
+    /// colour. The end colours extend beyond the start and end points, so to
+    /// hold the solid colour over the bottom fifth and fade over the rest:
+    ///
+    /// ```swift
+    /// let scrim = InterpolatedGradientView(fading: .systemBackground)
+    /// scrim.startPoint = CGPoint(x: 0.5, y: 0.8)
+    /// ```
+    public convenience init(
+        fading color: UIColor,
+        to endColor: UIColor? = nil,
+        interpolation: GradientInterpolation = .oklab,
+        easing: GradientEasing = .easeInOut,
+        frame: CGRect = .zero
+    ) {
+        // Fade to the same colour rather than `.clear`, which `.sRGB` doesn't premultiply.
+        self.init(
+            colors: [color, endColor ?? color.withAlphaComponent(0)],
+            interpolation: interpolation,
+            easing: easing,
+            frame: frame
+        )
+        startPoint = CGPoint(x: 0.5, y: 1)
+        endPoint = CGPoint(x: 0.5, y: 0)
     }
 
     public required init?(coder: NSCoder) {
@@ -75,12 +108,27 @@ open class InterpolatedGradientView: UIView {
         commonInit()
     }
 
+    /// Traits whose changes re-resolve ``colors``. Defaults to the system traits
+    /// that affect colour appearance; append any custom traits your dynamic
+    /// colours read.
+    open var colorTraits: [UITrait] = UITraitCollection.systemTraitsAffectingColorAppearance {
+        didSet { registerColorTraits() }
+    }
+
+    private var colorTraitRegistration: (any UITraitChangeRegistration)?
+
     private func commonInit() {
-        startPoint = CGPoint(x: 0, y: 0.5)
-        endPoint = CGPoint(x: 1, y: 0.5)
-        registerForTraitChanges(UITraitCollection.systemTraitsAffectingColorAppearance) { (view: Self, _) in
+        registerColorTraits()
+    }
+
+    private func registerColorTraits() {
+        if let colorTraitRegistration {
+            unregisterForTraitChanges(colorTraitRegistration)
+        }
+        colorTraitRegistration = registerForTraitChanges(colorTraits) { (view: Self, _) in
             view.updateColors()
         }
+        updateColors()
     }
 
     private func updateColors() {
@@ -103,6 +151,8 @@ open class InterpolatedGradientView: UIView {
         label.text = name
         label.font = .preferredFont(forTextStyle: .caption1)
         let gradient = InterpolatedGradientView(colors: [.systemBlue, .systemYellow], interpolation: mode)
+        gradient.startPoint = CGPoint(x: 0, y: 0.5)
+        gradient.endPoint = CGPoint(x: 1, y: 0.5)
         gradient.layer.cornerRadius = 6
         gradient.clipsToBounds = true
         gradient.heightAnchor.constraint(equalToConstant: 36).isActive = true
