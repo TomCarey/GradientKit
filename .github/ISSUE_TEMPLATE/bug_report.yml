@@ -1,0 +1,59 @@
+name: Bug report
+description: Something renders wrongly, crashes or doesn't compile.
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Code to reproduce
+      description: The smallest snippet that shows the problem, including the colours and interpolation mode.
+      render: swift
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: For rendering issues, a screenshot of the result (and of what you expected, if you have one) helps a lot.
+  - type: input
+    id: version
+    attributes:
+      label: GradientKit version
+      placeholder: e.g. 0.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Platforms
+      multiple: true
+      options:
+        - iOS
+        - macOS
+        - tvOS
+        - watchOS
+        - visionOS
+    validations:
+      required: true
+  - type: dropdown
+    id: api
+    attributes:
+      label: Which API are you using?
+      multiple: true
+      options:
+        - SwiftUI shape style
+        - UIKit view or layer
+        - Core Graphics shading
+        - Sampling colours directly
+  - type: input
+    id: environment
+    attributes:
+      label: Xcode and OS versions
+      placeholder: e.g. Xcode 27.0, iOS 27.0 simulator
