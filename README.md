@@ -230,10 +230,10 @@ let edge = InterpolatedGradientView(
 )
 ```
 
-To change the colour later, set `fadeColor`. It keeps fading to transparent, or to `fadeEndColor` if you set one:
+To change the colour later, set `colors` to a fade. Like `InterpolatedGradient.fade`, it fades to transparent unless you pass `to:`:
 
 ```swift
-edge.fadeColor = isSelected ? .systemFill : .systemBackground
+edge.colors = .fade(isSelected ? .systemFill : .systemBackground)
 ```
 
 Both initialisers also take `startPoint` and `endPoint`, so a gradient can be set up in a single expression.

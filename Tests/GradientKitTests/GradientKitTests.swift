@@ -348,32 +348,13 @@ private let traitColour = UIColor { $0[TestColourTrait.self] ? .red : .blue }
     #expect(fade.startPoint == CGPoint(x: 0.2, y: 0.5) && fade.endPoint == CGPoint(x: 1, y: 0.5))
 }
 
-@MainActor @Test func viewFadeColorReplacesColors() {
-    let view = InterpolatedGradientView(fading: .red)
-    #expect(view.fadeColor == .red)
-    view.fadeColor = .blue
-    #expect(view.colors == [.blue, UIColor.blue.withAlphaComponent(0)])
-    #expect(view.gradientLayer.gradientColors.first == UIColor.blue.cgColor)
+@MainActor @Test func viewFadeColors() {
+    #expect([UIColor].fade(.red) == [.red, UIColor.red.withAlphaComponent(0)])
+    #expect([UIColor].fade(.red, to: .black) == [.red, .black])
 
-    let plain = InterpolatedGradientView(colors: [.red, .blue])
-    #expect(plain.fadeColor == nil)
-    plain.fadeColor = .green
-    #expect(plain.colors == [.green, UIColor.green.withAlphaComponent(0)])
-}
-
-@MainActor @Test func viewFadeKeepsEndColor() {
     let view = InterpolatedGradientView(fading: .red, to: .black)
-    view.fadeColor = .blue
-    #expect(view.colors == [.blue, .black])
-    view.fadeEndColor = nil
-    #expect(view.colors == [.blue, UIColor.blue.withAlphaComponent(0)])
-}
-
-@MainActor @Test func viewSettingColorsClearsFadeColor() {
-    let view = InterpolatedGradientView(fading: .red)
-    view.colors = [.red, .blue]
-    #expect(view.fadeColor == nil)
-    view.fadeEndColor = .black
-    #expect(view.colors == [.red, .blue])
+    #expect(view.colors == [.red, .black])
+    view.colors = .fade(.blue)
+    #expect(view.gradientLayer.gradientColors.first == UIColor.blue.cgColor)
 }
 #endif
