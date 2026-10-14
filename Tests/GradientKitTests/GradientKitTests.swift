@@ -340,4 +340,21 @@ private let traitColour = UIColor { $0[TestColourTrait.self] ? .red : .blue }
     view.layoutIfNeeded()
     #expect(isClose(try firstColour(), ColorComponents(red: 1, green: 0, blue: 0)))
 }
+
+@MainActor @Test func viewInitSetsPoints() {
+    let view = InterpolatedGradientView(colors: [.red, .blue], startPoint: CGPoint(x: 0, y: 0.5), endPoint: CGPoint(x: 1, y: 0.5))
+    #expect(view.startPoint == CGPoint(x: 0, y: 0.5) && view.endPoint == CGPoint(x: 1, y: 0.5))
+    let fade = InterpolatedGradientView(fading: .red, startPoint: CGPoint(x: 0.2, y: 0.5), endPoint: CGPoint(x: 1, y: 0.5))
+    #expect(fade.startPoint == CGPoint(x: 0.2, y: 0.5) && fade.endPoint == CGPoint(x: 1, y: 0.5))
+}
+
+@MainActor @Test func viewFadeColors() {
+    #expect([UIColor].fade(.red) == [.red, UIColor.red.withAlphaComponent(0)])
+    #expect([UIColor].fade(.red, to: .black) == [.red, .black])
+
+    let view = InterpolatedGradientView(fading: .red, to: .black)
+    #expect(view.colors == [.red, .black])
+    view.colors = .fade(.blue)
+    #expect(view.gradientLayer.gradientColors.first == UIColor.blue.cgColor)
+}
 #endif
