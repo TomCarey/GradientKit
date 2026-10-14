@@ -223,10 +223,20 @@ For a [fade](#fades), the colour sits at `startPoint` and the transparency at `e
 
 ```swift
 // Solid along the left fifth, fading out to the right
-let edge = InterpolatedGradientView(fading: .systemBackground)
-edge.startPoint = CGPoint(x: 0.2, y: 0.5)
-edge.endPoint = CGPoint(x: 1, y: 0.5)
+let edge = InterpolatedGradientView(
+    fading: .systemBackground,
+    startPoint: CGPoint(x: 0.2, y: 0.5),
+    endPoint: CGPoint(x: 1, y: 0.5)
+)
 ```
+
+To change the colour later, set `fadeColor`. It keeps fading to transparent, or to `fadeEndColor` if you set one:
+
+```swift
+edge.fadeColor = isSelected ? .systemFill : .systemBackground
+```
+
+Both initialisers also take `startPoint` and `endPoint`, so a gradient can be set up in a single expression.
 
 Colours are re-resolved when the system traits that affect colour appearance change. If your dynamic colours also read custom traits, add them to `colorTraits`:
 

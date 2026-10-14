@@ -19,7 +19,31 @@ open class InterpolatedGradientView: UIView {
 
     public var gradientLayer: InterpolatedGradientLayer { layer as! InterpolatedGradientLayer }
 
-    open var colors: [UIColor] = [] { didSet { updateColors() } }
+    open var colors: [UIColor] = [] {
+        didSet {
+            if fadeColor != nil, colors != fadeColors {
+                fadeColor = nil
+            }
+            updateColors()
+        }
+    }
+
+    /// The solid colour of a fade, or `nil` if ``colors`` were set directly.
+    ///
+    /// Setting it replaces ``colors`` with this colour fading to ``fadeEndColor``,
+    /// or to transparent. Setting ``colors`` directly resets it to `nil`.
+    ///
+    /// ```swift
+    /// scrim.fadeColor = isHighlighted ? .systemFill : .systemBackground
+    /// ```
+    open var fadeColor: UIColor? {
+        didSet { applyFade() }
+    }
+
+    /// What ``fadeColor`` fades to. `nil` (the default) fades to transparent.
+    open var fadeEndColor: UIColor? {
+        didSet { applyFade() }
+    }
 
     /// Locations for ``colors`` in `0...1`, or `nil` for evenly spaced.
     open var locations: [Double]? {
@@ -63,6 +87,8 @@ open class InterpolatedGradientView: UIView {
         locations: [Double]? = nil,
         interpolation: GradientInterpolation = .oklab,
         easing: GradientEasing = .linear,
+        startPoint: CGPoint = CGPoint(x: 0.5, y: 0),
+        endPoint: CGPoint = CGPoint(x: 0.5, y: 1),
         frame: CGRect = .zero
     ) {
         super.init(frame: frame)
@@ -70,6 +96,8 @@ open class InterpolatedGradientView: UIView {
         self.locations = locations
         self.interpolation = interpolation
         self.easing = easing
+        self.startPoint = startPoint
+        self.endPoint = endPoint
         self.colors = colors
         updateColors() // `didSet` doesn't run for assignments in the class's own initialiser.
     }
@@ -82,25 +110,29 @@ open class InterpolatedGradientView: UIView {
     /// hold the solid colour over the bottom fifth and fade over the rest:
     ///
     /// ```swift
-    /// let scrim = InterpolatedGradientView(fading: .systemBackground)
-    /// scrim.startPoint = CGPoint(x: 0.5, y: 0.8)
+    /// let scrim = InterpolatedGradientView(fading: .systemBackground, startPoint: CGPoint(x: 0.5, y: 0.8))
     /// ```
+    ///
+    /// Change the colour later with ``fadeColor``.
     public convenience init(
         fading color: UIColor,
         to endColor: UIColor? = nil,
         interpolation: GradientInterpolation = .oklab,
         easing: GradientEasing = .easeInOut,
+        startPoint: CGPoint = CGPoint(x: 0.5, y: 1),
+        endPoint: CGPoint = CGPoint(x: 0.5, y: 0),
         frame: CGRect = .zero
     ) {
-        // Fade to the same colour rather than `.clear`, which `.sRGB` doesn't premultiply.
         self.init(
-            colors: [color, endColor ?? color.withAlphaComponent(0)],
             interpolation: interpolation,
             easing: easing,
+            startPoint: startPoint,
+            endPoint: endPoint,
             frame: frame
         )
-        startPoint = CGPoint(x: 0.5, y: 1)
-        endPoint = CGPoint(x: 0.5, y: 0)
+        fadeEndColor = endColor
+        fadeColor = color
+        applyFade() // `didSet` doesn't run for assignments in the class's own initialiser.
     }
 
     public required init?(coder: NSCoder) {
@@ -129,6 +161,18 @@ open class InterpolatedGradientView: UIView {
             view.updateColors()
         }
         updateColors()
+    }
+
+    /// The colours of the current fade. Fades to the same colour rather than
+    /// `.clear`, which `.sRGB` doesn't premultiply.
+    private var fadeColors: [UIColor]? {
+        fadeColor.map { [$0, fadeEndColor ?? $0.withAlphaComponent(0)] }
+    }
+
+    private func applyFade() {
+        if let fadeColors {
+            colors = fadeColors
+        }
     }
 
     private func updateColors() {
