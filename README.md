@@ -37,7 +37,7 @@ Add the package in Xcode (**File ▸ Add Package Dependencies…**) or in `Packa
 <!-- x-release-please-start-version -->
 ```swift
 dependencies: [
-    .package(url: "https://github.com/TomCarey/GradientKit.git", from: "0.2.0"),
+    .package(url: "https://github.com/TomCarey/GradientKit.git", from: "0.3.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: ["GradientKit"]),
